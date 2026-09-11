@@ -199,10 +199,22 @@ plugins:
       priority: 5
       condition: not-index
   - source: "@quartz-community/comments"
-    enabled: false
+    enabled: true
     options:
       provider: giscus
-      options: {}
+      options:
+        repo: "116goodbye/notes"
+        repoId: "R_kgDOUWrV8g"
+        category: "Comments"
+        categoryId: "DIC_kwDOUWrV8s4DFYFO"
+        # pathname 而非 url：换域名后旧评论不会失联
+        mapping: "pathname"
+        strict: false
+        reactionsEnabled: true
+        inputPosition: "bottom"
+        lang: "zh-CN"
+        # lightTheme / darkTheme 用默认的 light / dark 即可，
+        # 插件会跟随 Quartz 的深色模式开关自动切换
     layout:
       position: afterBody
       priority: 10

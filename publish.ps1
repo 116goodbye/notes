@@ -32,6 +32,15 @@ git commit -q -m "更新笔记 $stamp"
 Write-Host "`n正在推送到 GitHub..." -ForegroundColor Cyan
 git push
 
+# 网址从 quartz.config.yaml 的 baseUrl 读，改域名时只需改配置那一处
+$cfg = Get-Content "$repo\quartz.config.yaml" -Raw -Encoding UTF8
+if ($cfg -match '(?m)^\s*baseUrl:\s*(\S+)') {
+    $siteUrl = "https://$($Matches[1])"
+} else {
+    $siteUrl = "（未在 quartz.config.yaml 里找到 baseUrl）"
+}
+
 Write-Host "`n发布完成。Cloudflare 会自动重建，约 1-2 分钟后生效：" -ForegroundColor Green
-Write-Host "  https://notes-b1v.pages.dev" -ForegroundColor Green
+Write-Host "  $siteUrl" -ForegroundColor Green
+
 
