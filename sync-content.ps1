@@ -1,4 +1,4 @@
-﻿# 把 zsk_vault\public\site 的内容镜像到 Quartz 的 content 目录。
+﻿# 把 zsk_vault\site 的内容镜像到 Quartz 的 content 目录。
 # 用法：在 quartz 目录下执行  .\sync-content.ps1
 #
 # 用 /MIR 做镜像：site\ 里删掉的文件，content\ 里也会相应删除，
@@ -6,8 +6,8 @@
 
 $ErrorActionPreference = "Stop"
 
-# 这个路径变了的话，改这里一处即可（2026-09-11 由 zsk_vault\site 改为 public\site）。
-$src = "D:\hxl_vault\zsk_vault\public\site"
+# 发布目录的位置。在 Obsidian 里挪动这个文件夹后，改这里一处即可。
+$src = "D:\hxl_vault\zsk_vault\site"
 $dst = "C:\Users\ZhuanZ1\quartz\content"
 
 if (-not (Test-Path $src)) {
