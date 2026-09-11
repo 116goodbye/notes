@@ -6,8 +6,8 @@ configuration:
   enablePopovers: true
   analytics: null
   locale: zh-CN
-  # 部署到 Cloudflare Pages 后改成 <项目名>.pages.dev（不要带 https://）
-  baseUrl: CHANGEME.pages.dev
+  # Cloudflare Pages 域名，不要带 https:// 或结尾斜杠
+  baseUrl: notes-b1v.pages.dev
   ignorePatterns:
     - private
     - templates
