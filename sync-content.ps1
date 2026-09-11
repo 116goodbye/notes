@@ -1,4 +1,4 @@
-﻿# 把 zsk_vault\site 的内容镜像到 Quartz 的 content 目录。
+﻿# 把 zsk_vault\public\site 的内容镜像到 Quartz 的 content 目录。
 # 用法：在 quartz 目录下执行  .\sync-content.ps1
 #
 # 用 /MIR 做镜像：site\ 里删掉的文件，content\ 里也会相应删除，
@@ -6,11 +6,21 @@
 
 $ErrorActionPreference = "Stop"
 
-$src = "D:\hxl_vault\zsk_vault\site"
+# 这个路径变了的话，改这里一处即可（2026-09-11 由 zsk_vault\site 改为 public\site）。
+$src = "D:\hxl_vault\zsk_vault\public\site"
 $dst = "C:\Users\ZhuanZ1\quartz\content"
 
 if (-not (Test-Path $src)) {
     Write-Error "源目录不存在：$src"
+}
+
+# 安全闸：$src 一旦被改错（比如指到 vault 根目录），/MIR 会一声不响地
+# 把私人内容镜像进站点并发布出去，而发布是不可逆的。这里做一道兜底检查。
+$forbidden = @("日记", "private", "密码.md", "CLAUDE.md", "SKILL.md")
+foreach ($item in $forbidden) {
+    if (Test-Path (Join-Path $src $item)) {
+        Write-Error "拒绝同步：源目录 $src 里出现了「$item」，这看起来是私人内容。请检查 `$src 是否指错了位置。"
+    }
 }
 
 if (-not (Test-Path $dst)) {
