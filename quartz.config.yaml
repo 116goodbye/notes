@@ -7,7 +7,9 @@ configuration:
   analytics: null
   locale: zh-CN
   # Cloudflare Pages 域名，不要带 https:// 或结尾斜杠
-  baseUrl: notes-b1v.pages.dev
+  # 注意：自托管字体的 @font-face 用的是基于这个值的绝对地址，
+  # 改域名后必须重新构建，否则线上字体和 giscus 主题都会 404。
+  baseUrl: wshxl.eu.cc
   ignorePatterns:
     - private
     - templates
