@@ -289,14 +289,25 @@ layout:
         right: []
     content: {}
     folder:
+      # 必须写完整包名：extractPluginName 对字符串 source 直接原样返回，
+      # 写 kebab 名（如 reader-mode）匹配不上，会静默失效。
       exclude:
-        - reader-mode
+        - "@quartz-community/reader-mode"
       positions:
         right: []
     tag:
       exclude:
-        - reader-mode
+        - "@quartz-community/reader-mode"
       positions:
         right: []
     canvas: {}
     bases: {}
+    # 「动态」信息流页。key 是 pageType 的 layout 字段（不是插件 name），
+    # 见 dispatcher.ts 的 byPageType[pageType.layout]。
+    moments:
+      exclude:
+        - "@quartz-community/reader-mode"
+      positions:
+        beforeBody: [] # 去掉 breadcrumbs / article-title / content-meta / note-properties
+        afterBody: [] # 去掉 giscus 评论区
+        right: [] # 去掉 graph / backlinks / toc

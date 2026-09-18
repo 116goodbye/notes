@@ -1,3 +1,141 @@
 @use "./variables.scss" as *;
 
 // put your custom CSS here!
+//
+// 这个文件在 componentResources.ts 里被拼在 `@layer quartz-base` 之外，
+// 所以优先级天然压过 base.scss，改样式不必动组件。
+
+/* ===== 动态（朋友圈式信息流） ===== */
+
+.moments {
+  max-width: 40rem;
+  margin: 0 auto;
+}
+
+.moments-head {
+  margin-bottom: 1.5rem;
+
+  .moments-title {
+    margin: 0;
+    font-size: 1.6rem;
+  }
+
+  .moments-sub {
+    margin: 0.25rem 0 0;
+    font-size: 0.85rem;
+    color: var(--gray);
+  }
+}
+
+.moments-empty {
+  color: var(--gray);
+}
+
+.moments-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.moment {
+  padding: 1.1rem 1.25rem;
+  border-radius: 12px;
+  border: 1px solid var(--lightgray);
+  background: var(--highlight);
+}
+
+.moment-text {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.7;
+  display: -webkit-box;
+  -webkit-line-clamp: 8;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.moment-more {
+  display: inline-block;
+  margin-top: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--secondary);
+}
+
+// 图片网格。用 data-count 驱动，比 :has() / :nth-child 兼容性稳，
+// 也和朋友圈的排布一致：单图限宽、两图并排、三图以上走九宫格。
+.moment-media {
+  display: grid;
+  gap: 4px;
+  margin: 0.7rem 0 0;
+
+  &[data-count="1"] {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 62%;
+  }
+
+  &[data-count="2"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: 62%;
+  }
+
+  &[data-count="3"],
+  &[data-count="4"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  &[data-count="5"],
+  &[data-count="6"],
+  &[data-count="7"],
+  &[data-count="8"],
+  &[data-count="9"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  // 关键：盖掉 base.scss 里的 img { margin: 1rem 0 }
+  img {
+    margin: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: 6px;
+  }
+
+  // 单图不裁切，按原比例显示
+  &[data-count="1"] img {
+    aspect-ratio: auto;
+    max-height: 22rem;
+    object-fit: contain;
+  }
+}
+
+.moment-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-top: 0.6rem;
+  font-size: 0.78rem;
+  color: var(--gray);
+
+  time {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media all and (max-width: 800px) {
+  .moments {
+    max-width: 100%;
+  }
+
+  .moment-media {
+    &[data-count="1"],
+    &[data-count="2"] {
+      max-width: 100%;
+    }
+  }
+}
