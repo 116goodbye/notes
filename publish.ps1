@@ -23,7 +23,13 @@ Set-Location $repo
 function Invoke-Native {
     param(
         [string]$What,
-        [scriptblock]$Command
+        [scriptblock]$Command,
+        # 只有原生命令才该看 $LASTEXITCODE。调用 PowerShell 脚本时，它是该脚本里
+        # 最后一个原生命令留下的残值，并不代表这次调用本身成没成功。
+        # 例如 sync-content.ps1 内部的 robocopy 退出码 3 意为「成功，且目标有多余
+        # 文件」（robocopy 0-7 都算成功），拿到这里就会被误判成同步失败——
+        # 脚本已经自己按 -ge 8 判断过了，所以那种调用要加这个开关跳过。
+        [switch]$SkipExitCodeCheck
     )
     $prev = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
@@ -33,13 +39,15 @@ function Invoke-Native {
     } finally {
         $ErrorActionPreference = $prev
     }
-    if ($code -ne 0) {
+    if (-not $SkipExitCodeCheck -and $code -ne 0) {
         throw "$What 失败（退出码 $code）。已中止，站点未更新。"
     }
 }
 
 # --- 1. 同步内容 ---
-Invoke-Native "内容同步" { & "$repo\sync-content.ps1" }
+# 这个调用不看 $LASTEXITCODE：sync-content.ps1 是 PowerShell 脚本，它失败时会
+# 直接抛异常，而残留的退出码属于它内部的 robocopy。详见函数里的说明。
+Invoke-Native "内容同步" { & "$repo\sync-content.ps1" } -SkipExitCodeCheck
 
 # --- 2. 看有没有实际改动 ---
 Invoke-Native "git add" { git add -A }
