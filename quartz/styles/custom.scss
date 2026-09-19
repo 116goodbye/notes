@@ -220,3 +220,134 @@ body[data-slug="日记/index"] .page-listing {
     }
   }
 }
+
+/* ===== 3C：日记正文排版 ===== */
+// 范围：所有日记页，但排掉文件夹列表页。
+// 不能只用 `body[data-slug^="日记/"]`——`/日记/index` 也以「日记/」开头，
+// 而且它同样有 .page-header / .article-title / .markdown-rendered，会被一起改掉。
+// 用 $="/index" 而不是写死 ="日记/index"：将来加了日记子文件夹，
+// 那些子目录的列表页也会被一并排掉。
+body[data-slug^="日记/"]:not([data-slug$="/index"]) {
+  // 阅读宽度 40rem(640px) ≈ 40 个汉字/行。加在 .center 的**子元素**上，
+  // 不动 .center 自己——它是网格项（base 里 min-width:100% 把它钉死在整列），
+  // 动它会牵动整个三栏网格，连右侧图谱的轨道一起遭殃。
+  .center > .page-header,
+  .center > article,
+  .center > hr,
+  .center > .page-footer {
+    max-width: 40rem;
+    margin-inline: auto;
+  }
+
+  // base 的 6rem 是给带 TOC 的普通文章留的，日记没有 TOC，顶上太空
+  .center > .page-header {
+    margin-top: 4rem;
+  }
+
+  // 面包屑：左侧栏已经有入口，下面又是大标题，第三重重复
+  .breadcrumb-container {
+    display: none;
+  }
+
+  // 标题克制：base 是 28px / 700
+  .article-title {
+    margin: 0 0 0.75rem;
+    font-size: 1.6rem;
+    font-weight: 600;
+  }
+
+  // 日期弱化，并去掉「1分钟阅读」。
+  // 注意 show-comma：time 不是最后一个子元素，组件 CSS 会在它后面补一个逗号，
+  // 只藏 span 会留下「2026年9月19日,」——逗号要一起清掉。
+  .content-meta {
+    margin: 0.25rem 0 0;
+    color: var(--gray);
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+
+    > span {
+      display: none;
+    }
+
+    &[show-comma="true"] > :not(:last-child)::after {
+      content: none;
+    }
+  }
+
+  // 正文。全部收在 .markdown-rendered 里，免得漏到左右侧栏上。
+  .markdown-rendered {
+    p,
+    li {
+      line-height: 1.9; // base 是 1.6rem
+    }
+
+    > p {
+      margin: 1.5em 0;
+    }
+
+    // 删掉 md 里重复的 `# 标题` 之后正文已经没有 h1 了，这条现在是空转的。
+    // 留着是为了以后在日记中间写小标题时，不至于冒出个 28px 的大字。
+    > h1 {
+      font-size: 1.6rem;
+      font-weight: 600;
+      margin: 2rem 0 1rem;
+    }
+
+    > h2 {
+      margin-top: 2.2rem;
+    }
+
+    > h3 {
+      margin-top: 1.9rem;
+    }
+
+    // base 是 3px var(--secondary)（蓝），对日记来说偏重
+    blockquote {
+      margin: 1.5rem 0;
+      padding-left: 1rem;
+      border-left: 2px solid var(--lightgray);
+    }
+
+    img {
+      margin: 1.5rem 0;
+      border-radius: 4px;
+    }
+
+    pre {
+      padding: 0.25rem 0.75rem; // base 的 0 .5rem 太挤
+      border-radius: 6px;
+    }
+
+    // base 是 font-weight:600；a.internal 还带一层 --highlight 色块
+    a {
+      font-weight: 500;
+    }
+
+    a.internal {
+      background-color: transparent;
+      padding: 0;
+    }
+  }
+
+  // 底部：分隔线 + 评论区。
+  // 只隐藏评论区，不碰全站评论配置——Giscus 组件、/有感/、普通文章都不动。
+  .center > hr {
+    display: none;
+  }
+
+  .page-footer {
+    display: none;
+  }
+}
+
+@media all and ($mobile) {
+  body[data-slug^="日记/"]:not([data-slug$="/index"]) {
+    .center > .page-header {
+      margin-top: 2.5rem;
+    }
+
+    .article-title {
+      font-size: 1.5rem;
+    }
+  }
+}
