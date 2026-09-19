@@ -244,9 +244,45 @@ body[data-slug^="日记/"]:not([data-slug$="/index"]) {
     margin-top: 4rem;
   }
 
-  // 面包屑：左侧栏已经有入口，下面又是大标题，第三重重复
+  // 面包屑改造成返回入口。
+  //
+  // 原本是「Home ❯ 日记 ❯ 当前标题」三级，其中第 2 节就是
+  // `<a href="../日记/">日记</a>`——一个指向时间线的真链接，而且 DOM 位置
+  // 正好在 .article-title 上方，和想要的「← 日记 / 标题 / 日期」顺序完全吻合。
+  // 所以不新增组件、不改 DOM，只把其余两节藏掉、给第 2 节补个箭头。
+  //
+  // 作用域由外层 body[data-slug^="日记/"]:not([data-slug$="/index"]) 保证：
+  // 时间线列表页、/有感/、普通文章都吃不到这几条规则。
   .breadcrumb-container {
-    display: none;
+    display: flex;
+    // base 是 .75rem 0 0，那个上边距会把「← 日记」压到标题上
+    margin: 0 0 1.5rem;
+
+    > .breadcrumb-element {
+      display: none;
+    }
+
+    // 第 1 节是 Home，最后 1 节是当前日记标题，只留中间那节「日记」
+    > .breadcrumb-element:nth-child(2) {
+      display: flex;
+    }
+
+    // 分隔符 ❯ 不要
+    > .breadcrumb-element:nth-child(2) > p {
+      display: none;
+    }
+
+    // 箭头用伪元素补，不往 DOM 里塞东西
+    > .breadcrumb-element:nth-child(2) > a::before {
+      content: "← ";
+    }
+
+    // 克制的返回入口：灰色、不抢标题、无背景无边框、不是按钮
+    > .breadcrumb-element:nth-child(2) > a {
+      color: var(--gray);
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
   }
 
   // 标题克制：base 是 28px / 700
@@ -285,8 +321,30 @@ body[data-slug^="日记/"]:not([data-slug$="/index"]) {
       margin: 1.5em 0;
     }
 
-    // 删掉 md 里重复的 `# 标题` 之后正文已经没有 h1 了，这条现在是空转的。
-    // 留着是为了以后在日记中间写小标题时，不至于冒出个 28px 的大字。
+    // 正文里那个重复的 `# 标题`。
+    //
+    // 页面标题和正文标题是两个不同的元素，容器也不同：
+    //   页面标题 —— .page-header > .popover-hint > <h1 class="article-title">
+    //   正文标题 —— <article> > .markdown-rendered > <h1 id="…">
+    // 后者在 .markdown-rendered **里面**，这条 `>` 只能够到它，
+    // .article-title 在容器外，碰不到。
+    //
+    // 为什么不直接删 md 里那行：content/ 由 sync-content.ps1 用 robocopy /MIR
+    // 从 vault 镜像（保留源时间戳、删除多余文件），删了下次同步就回来
+    // —— 实测已经被还原过一次。所以改成渲染层兜底，无论 md 里有没有 `# 标题`，
+    // 日记都只显示一个标题：
+    //   有 —— 它必然是正文第一个元素，被这条吃掉；
+    //   没有 —— 首元素是 <p>，`:first-child` 匹配不到任何 h1，规则空转。
+    //
+    // 用 `:first-child` 而不是 `h1:first-of-type`：前者要求「h1 恰好是正文
+    // 第一个元素」才命中，日记中间手写的小标题（前面有段落或引用的 `# `）一律
+    // 不受影响；后者会把正文里第一个 h1 无差别吃掉，会误伤真标题。
+    > h1:first-child {
+      display: none;
+    }
+
+    // 正文中间手写的 h1 仍然显示，但按 3C 的字号收一档，
+    // 免得冒出 base 的 28px 大字，跟页面标题打架。
     > h1 {
       font-size: 1.6rem;
       font-weight: 600;

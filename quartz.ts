@@ -1,5 +1,6 @@
 import { loadQuartzConfig, loadQuartzLayout } from "./quartz/plugins/loader/config-loader"
 import { componentRegistry } from "./quartz/components/registry"
+import { registerCondition } from "./quartz/plugins/loader/conditions"
 import { MomentsPageType } from "./quartz/plugins/pageTypes/moments"
 import { DiaryDate } from "./quartz/plugins/transformers/diary-date"
 
@@ -29,6 +30,33 @@ componentRegistry.setOptionOverrides("@quartz-community/explorer", {
     // 整棵子树一起消失，不会进 DOM。加上长度判断是为了子文件夹也一并收掉，
     // 否则子文件夹节点会自己留下来变成一个空的可展开项。
     !(node.slugSegments[0] === "日记" && node.slugSegments.length > 1),
+})
+
+// 日记体系（含 `/日记/` 时间线列表页和所有日记正文）不挂 Giscus 评论区。
+//
+// 为什么不能靠 CSS 隐藏：comments 组件的 afterDOMLoaded 被编译进
+// static/scripts/script-2-*.js，里面的逻辑是
+//   let e = document.querySelector(".giscus"); if (!e) return;
+//   let t = document.createElement("script"); t.src = "https://giscus.app/client.js";
+// 只要那个空壳 div 还在 HTML 里，它就会往里面注入 client.js、真的发起请求。
+// display:none 拦不住这次请求，只是让人看不见而已。
+//
+// 走 layout.condition 而不是 frontmatter：config-loader.ts:795 对**任何**组件
+// 都会套 applyConditionWrapper，而 conditions.ts 的 registerCondition 是导出的，
+// 所以不用改核心文件就能注册自己的条件。条件为假时 ConditionalRender 直接
+// 返回 null —— 服务端根本不输出 .giscus，脚本也就无从注入。
+// ConditionalRender 同时转发了 afterDOMLoaded / css，所以 /有感/ 和普通文章
+// 完全不受影响，照常挂载。
+//
+// 时机同上面的 filterFn：registerCondition 只是往 Map 里塞一条，真正的查表
+// 发生在 loadQuartzConfig() → loadQuartzLayout() → applyConditionWrapper()，
+// 所以必须写在 loadQuartzConfig() 之前。
+registerCondition("not-diary", ({ fileData }) => {
+  // 用 startsWith("日记/") 一条覆盖两种页面：
+  //   `日记/index`（时间线列表）与 `日记/<某篇>`（正文）都以「日记/」开头。
+  // 返回 true = 该组件渲染；false = 不渲染。
+  const slug = fileData.slug ?? ""
+  return !slug.startsWith("日记/")
 })
 
 const config = await loadQuartzConfig()

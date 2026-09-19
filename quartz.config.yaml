@@ -220,6 +220,11 @@ plugins:
     layout:
       position: afterBody
       priority: 10
+      # 日记体系（`/日记/` 时间线 + 所有日记正文）不渲染评论区。
+      # 条件是渲染层的，注释组件根本不会进 HTML，因此 giscus.app/client.js
+      # 不会被注入、不会发请求——不是 CSS 隐藏。
+      # 条件实现在 quartz.ts 的 registerCondition("not-diary")。
+      condition: not-diary
   - source: "@quartz-community/footer"
     enabled: true
     options: {}
