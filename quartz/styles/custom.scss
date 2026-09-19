@@ -139,3 +139,84 @@
     }
   }
 }
+
+/* ===== 日记文件夹页：日期 + 标题同一排 ===== */
+//
+// 只命中 /日记/ 这一个文件夹页；/有感/、/tags/、普通笔记页都不受影响。
+// 这些规则落在 @layer quartz-base 之外（componentResources.ts 把 custom.scss
+// 拼在层外），所以不用 !important 就能压过 folder-page 自带的
+// `li.section-li > .section { grid-template-columns: fit-content(8em) 3fr 1fr }`。
+body[data-slug="日记/index"] .page-listing {
+  li.section-li {
+    margin-bottom: 1.5rem; // 层里给的是 1em，这里把行距拉开
+  }
+
+  li.section-li > .section {
+    display: grid;
+    // 两列：日期 + 标题。原本是三列（日期/标题/标签），标签列下面收掉了。
+    //
+    // 第一列的宽度必须写死，不能用 fit-content：每个 <li> 各自是一个独立 grid，
+    // fit-content 会按各自那行的日期算宽度，于是「2026年9月19日」和
+    // 「2026年12月19日」两行的标题左边缘会差一个字符——日期列就跳了。
+    //
+    // 8.5rem(136px)：实测最宽的 `2026年12月19日` 自然宽 123.06px，留 12.9px 余量。
+    // 不能用 8rem——那只有 4.94px 余量，浏览器换个 CJK 兜底字体就可能把日期挤到
+    // 标题上（nowrap + 定宽列 = 溢出叠字，不会自己换行）。
+    // 第二列用 minmax(0, 1fr) 而非 1fr：1fr 的下限是 min-content，遇到不肯
+    // 断行的长标题会把网格撑破，minmax(0, …) 才允许它收缩换行。
+    grid-template-columns: 8.5rem minmax(0, 1fr);
+    // 日期是 1rem、标题在 h3 里是 1.12rem，字号不同，按基线对齐才像同一排
+    align-items: baseline;
+
+    // 第一列：日期。辅助信息，比标题（--secondary）弱一档。
+    > .meta {
+      margin: 0; // 盖掉层里的 margin: 0 1em 0 0；列间距由列宽本身提供
+      opacity: 1; // 盖掉层里的 opacity: .6，强弱改由下面这行颜色单独控制
+      color: var(--gray);
+      font-variant-numeric: tabular-nums; // 数字等宽，一列日期看着更整齐
+      white-space: nowrap; // 桌面端保证日期不折行
+    }
+
+    // 第二列：标题。用的还是原来那个 <a>，链接功能不变。
+    > .desc {
+      min-width: 0;
+
+      // 仓库里那个没人调用的 PageList.tsx 也带一条 `.section h3 { margin: 0 }`，
+      // 这里自己写一遍，不依赖它。
+      h3 {
+        margin: 0;
+      }
+
+      // a.internal 在 base.scss 里带浅色底块 + 圆角，folder-page 在层里把它设成
+      // 了透明；这里显式再写一次，免得哪天插件那行没了就冒出「卡片感」。
+      // padding 归零是为了让标题文字的左边缘和网格列边缘严丝合缝。
+      h3 > a {
+        background-color: transparent;
+        padding: 0;
+      }
+    }
+
+    // 日记不显示标签。空列也必须收掉——不收的话它会被挤到第二行，
+    // 「日期 + 标题同一排」就破了。
+    > .tags {
+      display: none;
+    }
+  }
+}
+
+// 窄屏：日期字号收小一档，列宽跟着收到 7.5rem(120px)——0.85rem 下最宽的
+// `2026年12月19日` 约 105px，仍有 15px 余量——把省下的横向空间让给标题。
+//
+// 试过只收列宽不收字号（6.5rem）：实测连最短的 `2026年9月1日`（104.3px）都放不下，
+// 日期会在自己那列里折成两行，四行列表里每一行都变高。收字号比折行好看，
+// 也让「日期是辅助信息」这件事在窄屏上更明显。
+// 两列结构、同行排布、桌面端几何，一律不动。
+@media all and ($mobile) {
+  body[data-slug="日记/index"] .page-listing li.section-li > .section {
+    grid-template-columns: 7.5rem minmax(0, 1fr);
+
+    > .meta {
+      font-size: 0.85rem;
+    }
+  }
+}
