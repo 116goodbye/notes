@@ -409,3 +409,189 @@ body[data-slug^="日记/"]:not([data-slug$="/index"]) {
     }
   }
 }
+
+/* ===== 日记模式：/日记/ 时间线隐藏侧栏、限宽居中 ===== */
+//
+// 点侧栏「日记」进时间线，整个侧栏消失，时间线独占页面。
+//
+// 只命中时间线这一个页面。日记正文、/有感/、普通文章都不受影响——正文那套 3C
+// 的作用域是 `:not([data-slug$="/index"])`，与这里互补，两边不重叠。
+//
+// 为什么不用配置路线：`/日记/` 是 FolderPage.generate() 产出的虚拟页，
+// dispatcher 的 `match` 只在 Phase 2 对 content/ 里的真实文件调用，虚拟页够不到，
+// 所以自定义 pageType 认领不了它；而 byPageType.folder.template 会连 /有感/
+// 一起改。用 layout.condition 逐个摘左栏组件也不行——DefaultFrame 无条件渲染
+// <div class="left sidebar"> 容器，且 320px 是写死的网格轨道值，清了组件轨道
+// 也不收缩，最后还是得写 CSS。所以直接在这一层解决。
+//
+// 侧栏 / 网格 / 限宽 / 页脚对齐这几条只在非移动端生效：窄屏下 base 把左栏改成了
+// 顶栏，站点标题、搜索、暗色切换、Explorer 汉堡菜单全在里面，收掉等于手机端完全
+// 没有导航。
+// 唯一的例外是「隐藏 hr / 空 .page-footer」——那条在下面「页眉」那节的
+// body[data-slug="日记/index"] 里，两端通用，好让手机上和桌面上一样干净。
+@media all and not ($mobile) {
+  body[data-slug="日记/index"] {
+    // 1. 侧栏。左栏有内容；右栏在 folder 页本来就是空的
+    //    （quartz.config.yaml 里 byPageType.folder.positions.right: [] 只清内容、
+    //    不拆容器），但空壳照样占着 320px 轨道，所以两个都得收。
+    #quartz-body > .sidebar {
+      display: none;
+    }
+
+    // 2. 光 display:none 不够——列宽是死值 `320px auto 320px`，轨道不会因为
+    //    内容没了就收缩；areas 也必须一起换，3 列的 areas 配 1 列的 columns
+    //    会生成隐式轨道，反而更乱。这段照抄 base.scss 里 full-width frame
+    //    那套几何（404 页正在用），只换了触发条件。
+    //    `.center` 在 base 里没有 grid-area，靠自动放置落进第一行；
+    //    `min-width:100%` 让它撑满唯一那条 auto 轨道。
+    .page > #quartz-body {
+      grid-template-columns: auto;
+      grid-template-rows: auto auto auto;
+      grid-template-areas:
+        "grid-header"
+        "grid-center"
+        "grid-footer";
+    }
+
+    // 3. 限宽居中。52rem(832px)：和用户喜欢的 So!azy 日记页(820px)同一量级，
+    //    比原来三栏下的 743px 明显宽一档，两侧仍留有实在的空白。
+    //
+    //    加在 .center 的**子元素**上，不加在 .center 自己身上——它被 base 的
+    //    `min-width: 100%` 钉死在整列，而 CSS 里 min-width 优先于 max-width，
+    //    直接给 .center 设上限会失效。3C 也是这么做的。
+    .center > .page-header,
+    .center > .popover-hint {
+      max-width: 52rem;
+      margin-inline: auto;
+    }
+
+    // 4. 站点页脚限宽居中。base 给 footer 写了 `margin-left: 0`——三栏时它在
+    //    中间那列，靠左正好跟内容对齐；换成单列后它就贴到 1500px 容器的左边缘
+    //    去了，跟居中的时间线完全脱节（截图里那行「Created with Quartz」飘在
+    //    左下角就是这么来的）。这里补上同样的限宽居中，把它拉回内容列。
+    //    注意 footer 是**网格项**，跟 .center 的子元素不是一回事：base 在
+    //    `.center, footer { max-width:100%; min-width:100% }` 里也给 footer 塞了
+    //    min-width:100%，而 CSS 里 min-width 优先于 max-width——只写 max-width
+    //    会被它顶掉，实测宽度仍是 1500px。所以必须显式把 min-width 归零，
+    //    再用 width:100% 撑到轨道宽、由 max-width 收口。
+    #quartz-body > footer {
+      min-width: 0;
+      width: 100%;
+      max-width: 52rem;
+      margin-inline: auto;
+    }
+  }
+}
+
+/* ===== 日记模式：/日记/ 页眉 ===== */
+//
+// 目标排版（严格按用户给定）：
+//
+//   ← 返回
+//   ──────────────────────────────────   ← 第一条横线
+//                         日记 · 每日更新
+//   ──────────────────────────────────   ← 第二条横线
+//   2026年9月19日    今天的测试
+//
+// 全部由 CSS 生成，不新增 DOM、不改组件。第 3~5 行由
+// `.breadcrumb-container::after` 一个伪元素包办——border-top / content /
+// border-bottom 天然给出「线—标签—线」的先后顺序。
+//
+// 不加媒体查询：移动端也用同一套页眉。桌面端 .page-header 已被上面限宽到
+// 52rem 居中，移动端不限宽、横线自然跟着容器缩放。
+body[data-slug="日记/index"] {
+  // 目标排版里没有这两样，收掉。
+  // 注意 .article-title 只是 display:none，<h1> 仍在 DOM 里，语义/SEO 影响很小。
+  .center > .page-header .article-title {
+    display: none;
+  }
+
+  // 「此文件夹下有2条笔记。」——folder-page 生成的文件夹描述
+  .page-listing > p {
+    display: none;
+  }
+
+  // 列表下方那条横线 + 空 footer。
+  //
+  // 放在这个**不带媒体查询**的作用域里（而不是上面那个 not($mobile) 块），
+  // 是为了桌面端和移动端行为一致——否则手机上会在时间线与页脚之间孤零零
+  // 留一条线，两边观感对不上。
+  //
+  // 注意别跟站点页脚搞混，是两个完全不同的东西：
+  //   .center > .page-footer —— .center 内部装 afterBody 组件的空容器，
+  //                             这个页面因为 not-diary 排除了评论区，它一定是空的
+  //   #quartz-body > footer —— 网格里那个装站点页脚的 <footer>，里面有
+  //                             「Created with Quartz…」，那个不能藏（见上面第 4 条）
+  //
+  // 这条 hr 属于「分隔评论区」的残留，评论区都没了，它什么都分隔不了，
+  // 在一条干净的时间线里是纯噪音。3C 在正文页早就把它俩收掉了，这里保持一致。
+  .center > hr,
+  .center > .page-footer {
+    display: none;
+  }
+
+  .center > .page-header > .popover-hint > .breadcrumb-container {
+    display: block; // 组件默认是 flex 横排，这里要它独占整块
+    margin: 0;
+
+    // 只留第 1 节。第 2 节是当前文件夹自己（渲染时被塞了空 href，点了没反应），
+    // 第 1 节里的 ❯ 是分隔符，两者都不要。
+    > .breadcrumb-element:nth-child(2) {
+      display: none;
+    }
+
+    > .breadcrumb-element:nth-child(1) > p {
+      display: none;
+    }
+
+    // 组件给 .breadcrumb-element 设了 justify-content: center，而 display:block
+    // 让这个 flex 容器撑满整行——不改的话「← 返回」会被推到中间去。
+    > .breadcrumb-element:nth-child(1) {
+      justify-content: flex-start;
+    }
+
+    // "Home" → "← 返回"。
+    //
+    // 保留 <a> 本身：它是这个页面上唯一直指 / 的链接（href="../" 在 /日记/ 下
+    // 正好解析成 /），链接、键盘焦点、点击区域全部不变，只换可见文字。
+    // font-size:0 收掉 "Home" 的排版宽度，再由伪元素把文字补回来。
+    //
+    // 已知代价（用户已确认接受）：文本节点里仍是 "Home"，屏幕阅读器可能念
+    // "Home"，与视觉不一致。要在语义上也正确，只能新增组件或改全局
+    // rootName——而 breadcrumbs 在 `not-index` 条件下对所有非首页页面渲染，
+    // 改 rootName 会让普通文章的面包屑变成「返回 ❯ 诗与鸡汤」，所以不做。
+    > .breadcrumb-element:nth-child(1) > a {
+      font-size: 0;
+
+      &::before {
+        content: "← 返回";
+        font-size: 0.9rem;
+        color: var(--gray);
+        font-weight: 500;
+      }
+    }
+
+    // 第 3、4、5 行：右对齐标签 + 上下两条贯穿横线
+    &::after {
+      content: "日记 · 每日更新";
+      display: block;
+      text-align: right;
+      font-size: 0.8rem;
+      color: var(--gray);
+      margin-top: 0.7rem;
+      padding: 0.7rem 0;
+      border-top: 1px solid var(--lightgray); // 第一条横线
+      border-bottom: 1px solid var(--lightgray); // 第二条横线
+    }
+  }
+
+  // 移动端顶部留白。base 在窄屏把 .page-header 的 margin-top 归零了，
+  // 再加上网格那 5px 行间距，页眉会紧贴在顶栏下面（实测间距只有 5px，
+  // 几乎粘在一起）。3C 对日记正文页的同一个元素在窄屏给的就是 2.5rem，
+  // 这里跟它取齐，两个页面在手机上观感一致。
+  @media all and ($mobile) {
+    .center > .page-header {
+      margin-top: 2.5rem;
+    }
+  }
+}
