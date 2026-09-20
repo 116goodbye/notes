@@ -244,6 +244,19 @@ body[data-slug^="日记/"]:not([data-slug$="/index"]) {
     margin-top: 4rem;
   }
 
+  // 站点页脚。日记正文现在也是单列（侧栏被上面的日记模式骨架收掉了），
+  // 1500px 的轨道里 640px 的正文居中，而 base 给 footer 写了 `margin-left: 0`
+  // ——那个值在三栏时正好等于内容列左边缘，单列下就变成贴页面最左边，
+  // 跟正文完全脱节。跟时间线那边是同一个坑，同样处理。
+  // footer 是**网格项**不是 .center 的子元素，所以限制对象也换成它自己；
+  // 别忘了 min-width 优先于 max-width（base 给 footer 塞了 min-width:100%）。
+  #quartz-body > footer {
+    min-width: 0;
+    width: 100%;
+    max-width: 40rem;
+    margin-inline: auto;
+  }
+
   // 面包屑改造成返回入口。
   //
   // 原本是「Home ❯ 日记 ❯ 当前标题」三级，其中第 2 节就是
@@ -424,16 +437,24 @@ body[data-slug^="日记/"]:not([data-slug$="/index"]) {
 // <div class="left sidebar"> 容器，且 320px 是写死的网格轨道值，清了组件轨道
 // 也不收缩，最后还是得写 CSS。所以直接在这一层解决。
 //
-// 侧栏 / 网格 / 限宽 / 页脚对齐这几条只在非移动端生效：窄屏下 base 把左栏改成了
-// 顶栏，站点标题、搜索、暗色切换、Explorer 汉堡菜单全在里面，收掉等于手机端完全
-// 没有导航。
-// 唯一的例外是「隐藏 hr / 空 .page-footer」——那条在下面「页眉」那节的
-// body[data-slug="日记/index"] 里，两端通用，好让手机上和桌面上一样干净。
+// 只在非移动端生效：窄屏下 base 把左栏改成了顶栏，站点标题、搜索、暗色切换、
+// Explorer 汉堡菜单全在里面，收掉等于手机端完全没有导航。
+// 「隐藏 hr / 空 .page-footer」是唯一的例外——那条在下面「页眉」那节的
+// body[data-slug="日记/index"] 里（不带媒体查询），两端通用。
+//
+// ── 骨架：时间线和所有日记正文共用 ──
+//
+// 这两条必须同时覆盖 /日记/ 和 /日记/*。原来只写 ="日记/index"，而那是**精确
+// 匹配**——/日记/2026-09-19-今天的测试 根本不在范围内，所以点进某篇日记后左右
+// 侧栏又冒了出来，日记模式只在时间线生效。
+//
+// 改成 ^="日记/" 扩展，但**只扩展骨架这两条**：下面那个块里还有「时间线 52rem」
+// 和「站点页脚 52rem」，那两条是时间线专属的——日记正文走 3C 的 640px，一起
+// 放大的话两套宽度会在正文页打架。所以骨架共用，宽度各管各的。
 @media all and not ($mobile) {
-  body[data-slug="日记/index"] {
-    // 1. 侧栏。左栏有内容；右栏在 folder 页本来就是空的
-    //    （quartz.config.yaml 里 byPageType.folder.positions.right: [] 只清内容、
-    //    不拆容器），但空壳照样占着 320px 轨道，所以两个都得收。
+  body[data-slug^="日记/"] {
+    // 1. 侧栏。左栏是 Explorer 导航；右栏在 folder 页是空的、在日记正文页装着
+    //    关系图谱——按日记模式的要求，两种都收掉。
     #quartz-body > .sidebar {
       display: none;
     }
@@ -452,7 +473,69 @@ body[data-slug^="日记/"]:not([data-slug$="/index"]) {
         "grid-center"
         "grid-footer";
     }
+  }
+}
 
+/* ===== 日记模式：统一无衬线字体 ===== */
+//
+// 作用范围 = 整个日记模式：/日记/ 时间线和 /日记/* 正文，和上面的骨架同域。
+// 不加媒体查询——窄屏顶栏、时间线、正文两端都要换，用户要的是「整个日记模式」。
+//
+// 只重新声明两个**字体变量**，不写 `* { font-family }`：
+// base.scss 里正文走 `body { font-family: var(--bodyFont) }`、各级标题走
+// `h1…h6 { font-family: var(--headerFont) }`，popover 也是 `var(--bodyFont)`。
+// CSS 变量在 body 上被重新声明后整棵子树自动跟着换，既不用逐个元素写覆盖，
+// 也不会漏掉组件内部的文字（folder-page 的日期 `.meta` 和标题 `h3`、
+// 面包屑、搜索框都吃这两个变量）。
+//
+// 为什么是字面 `sans-serif` 而不是 system-ui 栈：用户明确指定
+// `font-family: sans-serif`。它是通用族关键字，由浏览器映射到系统默认无衬线
+// （Windows 上拉丁走 Segoe UI、中文走微软雅黑），不下载、不引入任何外部字体。
+// 站点原来那两个自托管字体（Source Sans Pro / Schibsted Grotesk）本来就没有
+// 中文字形，中文一直走系统回退；这条改动实际影响的是拉丁字母和数字。
+//
+// body 上那条 `font-family` 看似与变量重复，实为兜底：万一将来有人给 body
+// 换了字体来源，只要没同时改这里，日记模式仍是无衬线。
+//
+// 刻意不动 --codeFont：代码块保持等宽，等宽是功能性需求不是审美。
+// 刻意不动 --titleFont：那是站点标题「学以致用」的品牌字体，只在窄屏顶栏出现。
+body[data-slug^="日记/"] {
+  --bodyFont: sans-serif;
+  --headerFont: sans-serif;
+  font-family: sans-serif;
+
+  // 标题必须再写一条显式规则，光靠上面两个变量不够。
+  //
+  // @quartz-community/quartz-fonts 会把字体配置编译成
+  // `static/resource-style-d3a1a224.css`，在里面直接写**字面量**：
+  //   h1, h2, h3, h4, h5, h6 { font-family: "Schibsted Grotesk" }
+  // 而不是 `var(--headerFont)`。那个 <link> 排在 index-*.css（custom.scss 被
+  // 拼进去的那个文件）**后面**，特指度又同为 (0,0,1)，于是后加载的它赢。
+  //
+  // 实测症状很容易误判：h3 上读 `--headerFont` 已经是 sans-serif（变量确实被改了），
+  // 但 `font-family` 渲染出来仍是 Schibsted Grotesk——因为那条规则压根没读变量。
+  // 所以这里用祖先 `body[data-slug^="日记/"]` 把特指度抬到 (0,1,2)，稳赢，
+  // 不再依赖两个文件的加载顺序（顺序变了也不会翻车）。
+  //
+  // 只改 font-family，字号/字重/间距一律沿用原值。
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  thead {
+    font-family: sans-serif;
+  }
+}
+
+// ── 宽度：只有时间线是 52rem，日记正文的 640px 由下面 3C 单独管 ──
+//
+// 骨架拆出去之后，剩下的这两条必须继续锁死在 ="日记/index" 上：正文页一旦也
+// 套上 52rem，就会和 3C 的 40rem 抢同一个元素（3C 的特指度更高，表面上 3C 赢，
+// 但那是「靠特指度兜底」，后面谁动一下顺序就会翻车）。干脆按页面分开写。
+@media all and not ($mobile) {
+  body[data-slug="日记/index"] {
     // 3. 限宽居中。52rem(832px)：和用户喜欢的 So!azy 日记页(820px)同一量级，
     //    比原来三栏下的 743px 明显宽一档，两侧仍留有实在的空白。
     //
@@ -500,6 +583,17 @@ body[data-slug^="日记/"]:not([data-slug$="/index"]) {
 // 不加媒体查询：移动端也用同一套页眉。桌面端 .page-header 已被上面限宽到
 // 52rem 居中，移动端不限宽、横线自然跟着容器缩放。
 body[data-slug="日记/index"] {
+  // 页眉墨色：文字和两条横线共用。
+  //
+  // 用户两次明确要求「纯黑 #000」（上一版折中成 var(--dark)=#2b2b2b，这次按字面
+  // 实现）。浅色模式下真的写 #000；深色模式不能跟着用 #000——背景是 #161618，
+  // 黑字黑线会直接消失——所以由下面那条 `:root[saved-theme="dark"]` 覆盖成
+  // var(--dark)(#ebebec)。两条规则合起来：浅色纯黑、深色近白，两边都成立。
+  //
+  // 用变量而不是在两处各写一遍颜色，是为了让「文字」和「横线」永远同色——
+  // 只改一处就能整体调深浅。
+  --diary-ink: #000;
+
   // 目标排版里没有这两样，收掉。
   // 注意 .article-title 只是 display:none，<h1> 仍在 DOM 里，语义/SEO 影响很小。
   .center > .page-header .article-title {
@@ -563,11 +657,14 @@ body[data-slug="日记/index"] {
     > .breadcrumb-element:nth-child(1) > a {
       font-size: 0;
 
+      // 用户要的是「明确的黑白极简」：文字纯黑 + 字重抬高。
+      // `--gray`(#646464) 是更早一版的取值，在浅色底上偏灰，正是「太淡」的来源。
       &::before {
         content: "← 返回";
+        font-family: var(--headerFont);
         font-size: 0.9rem;
-        color: var(--gray);
-        font-weight: 500;
+        font-weight: 600;
+        color: var(--diary-ink);
       }
     }
 
@@ -576,12 +673,19 @@ body[data-slug="日记/index"] {
       content: "日记 · 每日更新";
       display: block;
       text-align: right;
+      // --headerFont 就是站点标题在用的 Schibsted Grotesk，属于「当前 Quartz
+      // 已有字体体系」，没有引入新字体。中文字形本来就走系统 CJK 回退，
+      // 这条主要影响拉丁字母、数字和那个间隔号「·」。
+      font-family: var(--headerFont);
       font-size: 0.8rem;
-      color: var(--gray);
+      font-weight: 600;
+      color: var(--diary-ink);
       margin-top: 0.7rem;
       padding: 0.7rem 0;
-      border-top: 1px solid var(--lightgray); // 第一条横线
-      border-bottom: 1px solid var(--lightgray); // 第二条横线
+      // 2px + --diary-ink：最早那版是 1px 的 --lightgray(#e5e5e5)，几乎是看不见的
+      // 浅灰，正是「线太细太淡」的来源。深浅两套主题的取值见 --diary-ink 的定义。
+      border-top: 2px solid var(--diary-ink); // 第一条横线
+      border-bottom: 2px solid var(--diary-ink); // 第二条横线
     }
   }
 
@@ -594,4 +698,13 @@ body[data-slug="日记/index"] {
       margin-top: 2.5rem;
     }
   }
+}
+
+// 深色模式下把页眉墨色换成 var(--dark)(#ebebec)。
+//
+// 只能挂在 :root 上——`[saved-theme="dark"]` 由 theme.ts 写在 <html> 元素，
+// body 是它的后代，所以这里用后代选择器；特指度 (0,2,2) 压过浅色那条
+// `body[data-slug="日记/index"]` 的 (0,1,1)，且写在文件更后面，两个维度都稳。
+:root[saved-theme="dark"] body[data-slug="日记/index"] {
+  --diary-ink: var(--dark);
 }
